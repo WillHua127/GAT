@@ -13,7 +13,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
-from utils import load_data
+from utils import load_dataset
 from models import GAT
 
 # Training settings
@@ -41,7 +41,7 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-adj, features, labels, idx_train, idx_val, idx_test = load_data(args.train_prefix)
+adj, features, labels, idx_train, idx_val, idx_test = load_dataset(args.train_prefix)
 
 # Model and optimizer
 model = GAT(nfeat=features.shape[1], 
