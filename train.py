@@ -12,7 +12,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
-from sklearn import metrics
 
 from utils import load_data
 from models import GAT, SpGAT
@@ -119,7 +118,8 @@ def compute_test(model, features, labels, adj, idx_test):
 
 def accuracy(output, labels):
     preds = output.max(1)[1].type_as(labels)
-    correct = preds.eq(labels).double().sum() #.average()????
+    correct = preds.eq(labels).double()
+    correct = correct.sum()
     return correct / len(labels)
 
 # Train model
@@ -164,4 +164,4 @@ print('Loading {}th epoch'.format(best_epoch))
 model.load_state_dict(torch.load('{}.pkl'.format(best_epoch)))
 
 # Testing
-compute_test()
+compute_test(model, features, labels, adj, idx_test)
