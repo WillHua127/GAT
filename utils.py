@@ -16,24 +16,28 @@ def parse_index_file(filename):
         index.append(int(line.strip()))
     return index
 
-def load_dataset(dataset):
-    dense_adj, features, labels = torch.load("%s_dense_adj.pt" % dataset), torch.load("%s_features.pt" % dataset), torch.load("%s_labels.pt" % dataset)
-    indices = torch.nonzero(dense_adj).t(); values = dense_adj[indices[0], indices[1]]
-    adj = torch.sparse.FloatTensor(indices, values, dense_adj.size()).clone()
-    del dense_adj, indices, values
-    
+def load_dataset(dataset, dense=True):
     if dataset == 'cora':
         idx_train, idx_val, idx_test = range(140), range(140, 640), range(1708, 2708)
     elif dataset == 'citeseer':
         idx_train, idx_val, idx_test = range(120), range(120, 620), range(2312, 3312)
     elif dataset == 'pubmed':
         idx_train, idx_val, idx_test = range(60), range(60, 560), range(18717, 19717)
-    
+
     idx_train = torch.LongTensor(idx_train)
     idx_val = torch.LongTensor(idx_val)
     idx_test = torch.LongTensor(idx_test)
+
+    dense_adj, features, labels = torch.load("%s_dense_adj.pt" % dataset), torch.load("%s_features.pt" % dataset), torch.load("%s_labels.pt" % dataset)
+    if dense:
+        return dense_adj, features, labels, idx_train, idx_val, idx_test
+    else:
+        indices = torch.nonzero(dense_adj).t(); values = dense_adj[indices[0], indices[1]]
+        adj = torch.sparse.FloatTensor(indices, values, dense_adj.size()).clone()
+        del dense_adj, indices, values
+        return adj, features, labels, idx_train, idx_val, idx_test
     
-    return adj, features, labels, idx_train, idx_val, idx_test
+
 
 
 def load_data(prefix):
