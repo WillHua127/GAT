@@ -44,23 +44,13 @@ if args.cuda:
 adj, features, labels, idx_train, idx_val, idx_test = load_data(args.train_prefix)
 
 # Model and optimizer
-if args.sparse:
-    print("SPARSE")
-    model = SpGAT(nfeat=features.shape[1], 
-                nhid=args.hidden, 
-                nclass=int(labels.max()) + 1, 
-                dropout=args.dropout, 
-                nheads=args.nb_heads, 
-                alpha=args.alpha)
-else:
-    print("NOT_SPARSE")
-    model = GAT(nfeat=features.shape[1], 
-                nhid=args.hidden, 
-                nclass=int(labels.max()) + 1, 
-                dropout=args.dropout, 
-                nheads=args.nb_heads, 
-                alpha=args.alpha)
-    print("MODEL_BUILT")
+model = GAT(nfeat=features.shape[1], 
+            nhid=args.hidden, 
+            nclass=int(labels.max()) + 1, 
+            dropout=args.dropout, 
+            nheads=args.nb_heads, 
+            alpha=args.alpha)
+print("MODEL_BUILT")
 optimizer = optim.Adam(model.parameters(), 
                        lr=args.lr, 
                        weight_decay=args.weight_decay)
