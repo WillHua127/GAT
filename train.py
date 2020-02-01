@@ -146,5 +146,5 @@ print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
 # Restore best model
-print "The best test accuracy : ", max(test_acc)
+print("The best test accuracy : ", max(test_acc))
 
