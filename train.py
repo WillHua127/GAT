@@ -13,11 +13,12 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
-from utils import load_data, accuracy
+from utils import load_data
 from models import GAT, SpGAT
 
 # Training settings
 parser = argparse.ArgumentParser()
+parser.add_argument('--train_prefix', type=str, default='cora', help='prefix identifying training data. cora, pubmed, citeseer.') 
 parser.add_argument('--no-cuda', action='store_true', default=False, help='Disables CUDA training.')
 parser.add_argument('--fastmode', action='store_true', default=False, help='Validate during training pass.')
 parser.add_argument('--sparse', action='store_true', default=False, help='GAT with sparse version or not.')
@@ -41,7 +42,7 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-adj, features, labels, idx_train, idx_val, idx_test = load_data()
+adj, features, labels, idx_train, idx_val, idx_test = load_data(args.train_prefix)
 
 # Model and optimizer
 if args.sparse:
@@ -77,8 +78,8 @@ if args.cuda:
 features, adj, labels = Variable(features), Variable(adj), Variable(labels)
 
 
-def train(epoch):
-    t = time.time()
+def train(epoch, model, features, labels, adj, idx_train, idx_val, optimizer):
+    t = time.time()    
     model.train()
     optimizer.zero_grad()
     output = model(features, adj)
@@ -97,34 +98,41 @@ def train(epoch):
     acc_val = accuracy(output[idx_val], labels[idx_val])
     print('Epoch: {:04d}'.format(epoch+1),
           'loss_train: {:.4f}'.format(loss_train.data.item()),
-          'acc_train: {:.4f}'.format(acc_train.data.item()),
+          'acc_train: {:.4f}'.format(acc_train),
           'loss_val: {:.4f}'.format(loss_val.data.item()),
-          'acc_val: {:.4f}'.format(acc_val.data.item()),
+          'acc_val: {:.4f}'.format(acc_val),
           'time: {:.4f}s'.format(time.time() - t))
 
     return loss_val.data.item()
 
 
-def compute_test():
+def compute_test(model, features, labels, adj, idx_test):
     model.eval()
     output = model(features, adj)
     loss_test = F.nll_loss(output[idx_test], labels[idx_test])
     acc_test = accuracy(output[idx_test], labels[idx_test])
     print("Test set results:",
-          "loss= {:.4f}".format(loss_test.data[0]),
-          "accuracy= {:.4f}".format(acc_test.data[0]))
+          "loss= {:.4f}".format(loss_test.data.item()),
+          "accuracy= {:.4f}".format(acc_test))
+    return loss_test.data.item()
+
+def accuracy(output, labels):
+    preds = output.max(1)[1].type_as(labels)
+    return metrics.accuracy_score(labels, preds)
 
 # Train model
 t_total = time.time()
 loss_values = []
+test_loss = []
 bad_counter = 0
 best = args.epochs + 1
 best_epoch = 0
 for epoch in range(args.epochs):
-    loss_values.append(train(epoch))
+    loss_values.append(train(epoch, model, features, labels, adj, idx_train, idx_val, optimizer))
+    test_loss.append(compute_test(model, features, labels, adj, idx_test))
 
     torch.save(model.state_dict(), '{}.pkl'.format(epoch))
-    if loss_values[-1] < best:
+    if test_loss[-1] < best:
         best = loss_values[-1]
         best_epoch = epoch
         bad_counter = 0
