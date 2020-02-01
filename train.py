@@ -123,7 +123,7 @@ for epoch in range(args.epochs):
     test_acc.append(acc)
 
     if test_loss[-1] < best:
-        best = loss_values[-1]
+        best = test_loss[-1]
         best_epoch = epoch
         bad_counter = 0
     else:
