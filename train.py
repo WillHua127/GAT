@@ -14,14 +14,13 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 from utils import load_data
-from models import GAT, SpGAT
+from models import GAT
 
 # Training settings
 parser = argparse.ArgumentParser()
 parser.add_argument('--train_prefix', type=str, default='cora', help='prefix identifying training data. cora, pubmed, citeseer.') 
 parser.add_argument('--no-cuda', action='store_true', default=False, help='Disables CUDA training.')
 parser.add_argument('--fastmode', action='store_true', default=False, help='Validate during training pass.')
-parser.add_argument('--sparse', action='store_true', default=False, help='GAT with sparse version or not.')
 parser.add_argument('--seed', type=int, default=72, help='Random seed.')
 parser.add_argument('--epochs', type=int, default=10000, help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.007, help='Initial learning rate.')
@@ -103,8 +102,6 @@ def train(epoch, model, features, labels, adj, idx_train, idx_val, optimizer):
           'acc_val: {:.4f}'.format(acc_val),
           'time: {:.4f}s'.format(time.time() - t))
 
-    return loss_val.data.item()
-
 
 def compute_test(model, features, labels, adj, idx_test):
     model.eval()
@@ -114,7 +111,7 @@ def compute_test(model, features, labels, adj, idx_test):
     print("Test set results:",
           "loss= {:.4f}".format(loss_test.data.item()),
           "accuracy= {:.4f}".format(acc_test))
-    return loss_test.data.item()
+    return loss_test.data.item(), acc_test
 
 def accuracy(output, labels):
     preds = output.max(1)[1].type_as(labels)
@@ -124,16 +121,17 @@ def accuracy(output, labels):
 
 # Train model
 t_total = time.time()
-loss_values = []
+test_acc = []
 test_loss = []
 bad_counter = 0
 best = args.epochs + 1
 best_epoch = 0
 for epoch in range(args.epochs):
-    loss_values.append(train(epoch, model, features, labels, adj, idx_train, idx_val, optimizer))
-    test_loss.append(compute_test(model, features, labels, adj, idx_test))
+    train(epoch, model, features, labels, adj, idx_train, idx_val, optimizer)
+    loss, acc = compute_test(model, features, labels, adj, idx_test)
+    test_loss.append(loss)
+    test_acc.append(acc)
 
-    torch.save(model.state_dict(), '{}.pkl'.format(epoch))
     if test_loss[-1] < best:
         best = loss_values[-1]
         best_epoch = epoch
@@ -143,25 +141,10 @@ for epoch in range(args.epochs):
 
     if bad_counter == args.patience:
         break
-
-    files = glob.glob('*.pkl')
-    for file in files:
-        epoch_nb = int(file.split('.')[0])
-        if epoch_nb < best_epoch:
-            os.remove(file)
-
-files = glob.glob('*.pkl')
-for file in files:
-    epoch_nb = int(file.split('.')[0])
-    if epoch_nb > best_epoch:
-        os.remove(file)
-
+        
 print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
 # Restore best model
-print('Loading {}th epoch'.format(best_epoch))
-model.load_state_dict(torch.load('{}.pkl'.format(best_epoch)))
+print "The best test accuracy : ", max(test_acc)
 
-# Testing
-compute_test(model, features, labels, adj, idx_test)
