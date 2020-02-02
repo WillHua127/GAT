@@ -18,9 +18,8 @@ from models import GAT
 
 # Training settings
 parser = argparse.ArgumentParser()
-parser.add_argument('--train_prefix', type=str, default='cora', help='prefix identifying training data. cora, pubmed, citeseer.') 
+parser.add_argument('--dataset', type=str, default='cora', help='prefix identifying training data. cora, pubmed, citeseer.') 
 parser.add_argument('--no-cuda', action='store_true', default=False, help='Disables CUDA training.')
-parser.add_argument('--fastmode', action='store_true', default=False, help='Validate during training pass.')
 parser.add_argument('--seed', type=int, default=72, help='Random seed.')
 parser.add_argument('--epochs', type=int, default=10000, help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.007, help='Initial learning rate.')
@@ -29,7 +28,7 @@ parser.add_argument('--hidden', type=int, default=1, help='Number of hidden unit
 parser.add_argument('--nb_heads', type=int, default=1, help='Number of head attentions.')
 parser.add_argument('--dropout', type=float, default=0.7, help='Dropout rate (1 - keep probability).')
 parser.add_argument('--alpha', type=float, default=0.3, help='Alpha for the leaky_relu.')
-parser.add_argument('--patience', type=int, default=50, help='Patience')
+parser.add_argument('--patience', type=int, default=200, help='Patience')
 
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -41,7 +40,7 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-adj, features, labels, idx_train, idx_val, idx_test = load_dataset(args.train_prefix)
+adj, features, labels, idx_train, idx_val, idx_test = load_dataset(args.dataset)
 
 # Model and optimizer
 model = GAT(nfeat=features.shape[1], 
