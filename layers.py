@@ -71,7 +71,7 @@ class GraphAttentionLayer(nn.Module):
         # Self-attention on the nodes - Shared attention mechanism
         input1 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
         input2 = torch.sub(h[edge[0, :], :], h[edge[1, :], :])
-        edge_h = torch.cat([h[edge[0, :], :], h[edge[0, :], :], input1, input2], dim=1).t()
+        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
         # edge: 2*D x E
 
         edge_e = torch.exp(-self.leakyrelu(self.a.mm(edge_h).squeeze()))
