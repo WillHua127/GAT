@@ -47,10 +47,13 @@ class GraphAttentionLayer(nn.Module):
         
         edge = adj._indices()
         self.edge = edge
-
+        
         self.W = nn.Parameter(torch.zeros(size=(in_features, out_features)))
         nn.init.xavier_normal_(self.W.data, gain=1.414)
-                
+        
+        self.bias = nn.Parameter(torch.zeros(size=(adj.shape[0], out_features)))
+        nn.init.xavier_normal_(self.bias.data, gain=1.414)
+        
         self.a = nn.Parameter(torch.zeros(size=(1, 4*out_features)))
         nn.init.xavier_normal_(self.a.data, gain=1.414)
 
@@ -64,7 +67,8 @@ class GraphAttentionLayer(nn.Module):
         N = input.size()[0]
         edge = self.edge
 
-        h = torch.mm(input, self.W)
+        h = torch.mm(input, self.W)+self.bias
+        h = F.relu6(h)
         # h: N x out
         assert not torch.isnan(h).any()
 
