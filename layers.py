@@ -57,7 +57,7 @@ class GraphAttentionLayer(nn.Module):
     def forward(self, input, adj):
         dv = 'cuda' if input.is_cuda else 'cpu'
 
-        N = input.size()[0]
+        N = adj.size()[0]
         edge = adj.nonzero().t()
 
         h = torch.mm(input, self.W)
