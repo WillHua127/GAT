@@ -45,11 +45,12 @@ adj, features, labels, idx_train, idx_val, idx_test = load_dataset(args.train_pr
 
 # Model and optimizer
 model = GAT(nfeat=features.shape[1], 
-            nhid=args.hidden, 
-            nclass=int(labels.max()) + 1, 
-            dropout=args.dropout, 
-            nheads=args.nb_heads, 
-            alpha=args.alpha)
+                nhid=args.hidden, 
+                nclass=int(labels.max()) + 1, 
+                dropout=args.dropout, 
+                nheads=args.nb_heads, 
+                alpha=args.alpha,
+                adj=adj)
 print("MODEL_BUILT")
 optimizer = optim.Adam(model.parameters(), 
                        lr=args.lr, 
@@ -71,22 +72,18 @@ def train(epoch, model, features, labels, adj, idx_train, idx_val, optimizer):
     t = time.time()    
     model.train()
     optimizer.zero_grad()
-    output = model(features, adj)
-    loss_train = F.nll_loss(output[idx_train], labels[idx_train])
+    output = model(features)
+    loss_train = F.cross_entropy(output[idx_train], labels[idx_train])
     acc_train = accuracy(output[idx_train], labels[idx_train])
     loss_train.backward()
     optimizer.step()
 
-    if not args.fastmode:
-        # Evaluate validation set performance separately,
-        # deactivates dropout during validation run.
-        model.eval()
-        output = model(features, adj)
-
-    loss_val = F.nll_loss(output[idx_val], labels[idx_val])
+    model.eval()
+    output = model(features)
+    loss_val = F.cross_entropy(output[idx_val], labels[idx_val])
     acc_val = accuracy(output[idx_val], labels[idx_val])
-    
-    loss_test = F.nll_loss(output[idx_test], labels[idx_test])
+
+    loss_test = F.cross_entropy(output[idx_test], labels[idx_test])
     acc_test = accuracy(output[idx_test], labels[idx_test])
     
     print('Epoch: {:04d}'.format(epoch+1),
