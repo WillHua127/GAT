@@ -105,6 +105,9 @@ for runtime in range(args.runtimes):
     optimizer = optim.Adam(model.parameters(), 
                            lr=args.lr, 
                            weight_decay=args.weight_decay)
+    if args.cuda:
+        model.cuda()
+    
     t_total = time.time()
     test_acc = []
     val_loss = []
