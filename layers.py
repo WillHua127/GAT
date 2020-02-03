@@ -65,7 +65,7 @@ class GraphAttentionLayer(nn.Module):
         edge = self.edge
 
         h = torch.mm(input, self.W)
-        h = F.relu6(h)
+        h = self.leakyrelu(h)
         # h: N x out
         assert not torch.isnan(h).any()
 
