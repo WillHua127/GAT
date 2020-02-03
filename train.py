@@ -18,6 +18,7 @@ from models import GAT
 
 # Training settings
 parser = argparse.ArgumentParser()
+parser.add_argument('--network', type=str, default='gcn_onepath', help='network model.') 
 parser.add_argument('--dataset', type=str, default='cora', help='prefix identifying training data. cora, pubmed, citeseer.') 
 parser.add_argument('--no-cuda', action='store_true', default=False, help='Disables CUDA training.')
 parser.add_argument('--fastmode', action='store_true', default=False, help='Validate during training pass.')
