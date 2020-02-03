@@ -45,7 +45,6 @@ if args.cuda:
 adj, features, labels, idx_train, idx_val, idx_test = load_dataset(args.dataset)
 
 if args.cuda:
-    model.cuda()
     features = features.cuda()
     adj = adj.cuda()
     labels = labels.cuda()
