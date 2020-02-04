@@ -29,6 +29,6 @@ class GAT(nn.Module):
         x = F.dropout(x, self.dropout, training=self.training)
         x = torch.cat([att(x) for att in self.attentions], dim=1)
         x = F.dropout(x, self.dropout, training=self.training)
-        x = F.elu(self.out_att(x))
+        x = self.out_att(x) #x = F.elu(self.out_att(x))
         return x
 

@@ -18,22 +18,19 @@ from models import GAT
 
 # Training settings
 parser = argparse.ArgumentParser()
-parser.add_argument('--network', type=str, default='gcn_onepath', help='network model.') 
-parser.add_argument('--public', type=int, default=1, help='split data') 
-parser.add_argument('--dataset', type=str, default='cora', help='prefix identifying training data. cora, pubmed, citeseer.') 
+parser.add_argument('--train_prefix', type=str, default='cora', help='prefix identifying training data. cora, pubmed, citeseer.') 
 parser.add_argument('--no-cuda', action='store_true', default=False, help='Disables CUDA training.')
 parser.add_argument('--fastmode', action='store_true', default=False, help='Validate during training pass.')
 parser.add_argument('--seed', type=int, default=72, help='Random seed.')
 parser.add_argument('--epochs', type=int, default=10000, help='Number of epochs to train.')
-parser.add_argument('--lr', type=float, default=0.007, help='Initial learning rate.')
+parser.add_argument('--lr', type=float, default=0.005, help='Initial learning rate.')
 parser.add_argument('--weight_decay', type=float, default=6e-4, help='Weight decay (L2 loss on parameters).')
-parser.add_argument('--hidden', type=int, default=1, help='Number of hidden units.')
-parser.add_argument('--nb_heads', type=int, default=1, help='Number of head attentions.')
+parser.add_argument('--hidden', type=int, default=16, help='Number of hidden units.')
+parser.add_argument('--nb_heads', type=int, default=8, help='Number of head attentions.')
 parser.add_argument('--dropout', type=float, default=0.7, help='Dropout rate (1 - keep probability).')
 parser.add_argument('--alpha', type=float, default=0.3, help='Alpha for the leaky_relu.')
-parser.add_argument('--patience', type=int, default=200, help='Patience')
+parser.add_argument('--patience', type=int, default=50, help='Patience')
 parser.add_argument('--runtimes', type=int, default=5, help='Runtim')
-parser.add_argument('--identifier', type=int, default=1234567, help='Identifier for the job')
 
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -45,9 +42,10 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-adj, features, labels, idx_train, idx_val, idx_test = load_dataset(args.dataset)
+adj, features, labels, idx_train, idx_val, idx_test = load_dataset(args.train_prefix)
 
 if args.cuda:
+    model.cuda()
     features = features.cuda()
     adj = adj.cuda()
     labels = labels.cuda()
@@ -107,9 +105,6 @@ for runtime in range(args.runtimes):
     optimizer = optim.Adam(model.parameters(), 
                            lr=args.lr, 
                            weight_decay=args.weight_decay)
-    if args.cuda:
-        model.cuda()
-    
     t_total = time.time()
     test_acc = []
     val_loss = []
@@ -141,5 +136,4 @@ for runtime in range(args.runtimes):
     print("The best test accuracy this tuntime : ",best_test)
     del model, optimizer
 print("The average test accuracy : ", np.mean(best_tests), "The test variance : ", np.var(best_tests), "The test variance : ", np.std(best_tests))
-script = open("%d.txt" % args.identifier, 'w'); script.write("%e" % np.mean(best_tests)); script.close()
 
