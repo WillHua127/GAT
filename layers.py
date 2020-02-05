@@ -98,9 +98,10 @@ class GraphAttentionLayer(nn.Module):
         assert not torch.isnan(h).any()
 
         # Self-attention on the nodes - Shared attention mechanism
-        input1 = gamma * torch.add((h[edge[0, :], :]), h[edge[1, :], :])
+        input1 = gamma * torch.add((h[edge[0, :], :]), h[edge[1, :], :])         
         input2 = (2-gamma) * torch.sub(h[edge[0, :], :], h[edge[1, :], :])
-        
+        if not self.concat:
+            input2 = (2-gamma) * torch.add(h[edge[0, :], :], h[edge[1, :], :])
         edge_h = torch.cat([beta*h[edge[0, :], :], (2-beta)*h[edge[1, :], :], input1, input2], dim=1).t()
         # edge: 2*D x E
 
