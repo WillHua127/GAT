@@ -55,8 +55,8 @@ class GraphAttentionLayer(nn.Module):
         self.a = nn.Parameter(torch.zeros(size=(1, 4*out_features)))
         nn.init.xavier_normal_(self.a.data, gain=1.414)
         
-        self.g = nn.Parameter(torch.zeros(size=(1, 1)))
-        nn.init.xavier_uniform_(self.g.data, gain=1)
+        #self.g = nn.Parameter(torch.zeros(size=(1, 1)))
+        #nn.init.xavier_uniform_(self.g.data, gain=1)
         
         self.b = nn.Parameter(torch.zeros(size=(1, 1)))
         nn.init.xavier_uniform_(self.b.data, gain=1)
@@ -83,13 +83,15 @@ class GraphAttentionLayer(nn.Module):
     def gam(self, x, epsilon=1e-6):
         return F.relu6(x+3)/3 + epsilon
     
+    
     def forward(self, input):
         dv = 'cuda' if input.is_cuda else 'cpu'
 
         N = input.size()[0]
         edge = self.edge
-        gamma = self.gam(self.g)
-        beta = self.gam(self.b)
+        #gamma = self.gam(self.g)
+        #beta = self.gam(self.b)
+        theta = self.gam(self.b)/2
         
 
         h = torch.mm(input, self.W)
@@ -98,11 +100,11 @@ class GraphAttentionLayer(nn.Module):
         assert not torch.isnan(h).any()
 
         # Self-attention on the nodes - Shared attention mechanism
-        input1 = gamma * torch.add((h[edge[0, :], :]), h[edge[1, :], :])         
-        input2 = (2-gamma) * torch.sub(h[edge[0, :], :], h[edge[1, :], :])
-        if not self.concat:
-            input2 = (2-gamma) * torch.add(h[edge[0, :], :], h[edge[1, :], :])
-        edge_h = torch.cat([beta*h[edge[0, :], :], (2-beta)*h[edge[1, :], :], input1, input2], dim=1).t()
+        input1 = torch.add((h[edge[0, :], :]), h[edge[1, :], :])         
+        input2 = torch.sub(h[edge[0, :], :], h[edge[1, :], :])
+        #if not self.concat:
+        #    input2 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
+        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
         # edge: 2*D x E
 
         edge_e = torch.exp(-self.leakyrelu(torch.div(self.a.mm(edge_h).squeeze(),torch.norm(self.a))))
@@ -119,7 +121,7 @@ class GraphAttentionLayer(nn.Module):
         #assert not torch.isnan(h_prime).any()
         # h_prime: N x out
         
-        h_prime = h_prime.div(e_rowsum+1e-16)
+        h_prime = h_prime.div(e_rowsum+theta)
         # h_prime: N x out
         assert not torch.isnan(h_prime).any()
 
