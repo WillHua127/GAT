@@ -100,13 +100,13 @@ class GraphAttentionLayer(nn.Module):
         assert not torch.isnan(h).any()
 
         # Self-attention on the nodes - Shared attention mechanism
-        #input1 = torch.add((h[edge[0, :], :]), h[edge[1, :], :])         
-        #input2 = torch.sub(h[edge[0, :], :], h[edge[1, :], :])
+        input1 = self.relu_bt(torch.add(h[edge[0, :], :], h[edge[1, :], :]))         
+        input2 = self.relu_bt(torch.sub(h[edge[0, :], :], h[edge[1, :], :]))
         #if not self.concat:
         #    input2 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
-        #edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
+        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
         # edge: 2*D x E
-        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :]], dim=1).t()
+        #edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :]], dim=1).t()
 
         edge_e = torch.exp(-self.leakyrelu(torch.div(self.a.mm(edge_h).squeeze(),torch.norm(self.a))))
         assert not torch.isnan(edge_e).any()
