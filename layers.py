@@ -54,6 +54,8 @@ class GraphAttentionLayer(nn.Module):
         nn.init.xavier_normal_(self.W.data, gain=1.414)
         self.a = nn.Parameter(torch.zeros(size=(1, 4*out_features)))
         nn.init.xavier_normal_(self.a.data, gain=1.414)
+        self.WT = nn.Parameter(torch.zeros(size=(4*out_features, 4*out_features)))
+        nn.init.xavier_normal_(self.WT.data, gain=1.414)
         
         #self.g = nn.Parameter(torch.zeros(size=(1, 1)))
         #nn.init.xavier_uniform_(self.g.data, gain=1)
@@ -105,6 +107,7 @@ class GraphAttentionLayer(nn.Module):
         #if not self.concat:
         #    input2 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
         edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
+        edge_h = torch.mm(self.WT, edge_h)
         # edge: 2*D x E
         #edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :]], dim=1).t()
 
