@@ -106,10 +106,10 @@ class GraphAttentionLayer(nn.Module):
         input2 = self.relu_bt(torch.sub(h[edge[0, :], :], h[edge[1, :], :]))
         #if not self.concat:
         #    input2 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
-        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
-        edge_h = torch.mm(self.WT, edge_h)
+        #edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
+        #edge_h = torch.mm(self.WT, edge_h)
         # edge: 2*D x E
-        #edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :]], dim=1).t()
+        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :]], dim=1).t()
 
         edge_e = torch.exp(-self.leakyrelu(torch.div(self.a.mm(edge_h).squeeze(),torch.norm(self.a))))
         assert not torch.isnan(edge_e).any()
@@ -131,10 +131,12 @@ class GraphAttentionLayer(nn.Module):
 
         if self.concat:
             # if this layer is not last layer,
-            return self.relu_bt(h_prime)
+            #return self.relu_bt(h_prime)
+            return F.elu(h_prime)
         else:
             # if this layer is last layer,
-            return self.relu_bt(h_prime)
+            #return self.relu_bt(h_prime)
+            return F.elu(h_prime)
 
     def __repr__(self):
         return self.__class__.__name__ + ' (' + str(self.in_features) + ' -> ' + str(self.out_features) + ')'
