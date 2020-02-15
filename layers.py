@@ -52,9 +52,9 @@ class GraphAttentionLayer(nn.Module):
 
         self.W = nn.Parameter(torch.zeros(size=(in_features, out_features)))
         nn.init.xavier_normal_(self.W.data, gain=1.414)
-        self.a = nn.Parameter(torch.zeros(size=(1, 2*out_features)))
+        self.a = nn.Parameter(torch.zeros(size=(1, 4*out_features)))
         nn.init.xavier_normal_(self.a.data, gain=1.414)
-        self.WT = nn.Parameter(torch.zeros(size=(4*out_features, 2*out_features)))
+        self.WT = nn.Parameter(torch.zeros(size=(4*out_features, 4*out_features)))
         nn.init.xavier_normal_(self.WT.data, gain=1.414)
         
         #self.g = nn.Parameter(torch.zeros(size=(1, 1)))
@@ -102,6 +102,8 @@ class GraphAttentionLayer(nn.Module):
         assert not torch.isnan(h).any()
 
         # Self-attention on the nodes - Shared attention mechanism
+        input1 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
+        input2 = torch.sub(h[edge[0, :], :], h[edge[1, :], :])
         #input1 = self.relu_bt(torch.add(h[edge[0, :], :], h[edge[1, :], :]))         
         #input2 = self.relu_bt(torch.sub(h[edge[0, :], :], h[edge[1, :], :]))
         #if not self.concat:
@@ -109,7 +111,7 @@ class GraphAttentionLayer(nn.Module):
         #edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
         #edge_h = torch.mm(self.WT, edge_h)
         # edge: 2*D x E
-        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :]], dim=1).t()
+        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
 
         edge_e = torch.exp(-self.leakyrelu(torch.div(self.a.mm(edge_h).squeeze(),torch.norm(self.a))))
         assert not torch.isnan(edge_e).any()
@@ -131,12 +133,12 @@ class GraphAttentionLayer(nn.Module):
 
         if self.concat:
             # if this layer is not last layer,
-            return self.relu_bt(h_prime)
-            #return F.elu(h_prime)
+            #return self.relu_bt(h_prime)
+            return F.elu(h_prime)
         else:
             # if this layer is last layer,
-            return self.relu_bt(h_prime)
-            #return F.elu(h_prime)
+            #return self.relu_bt(h_prime)
+            return F.elu(h_prime)
 
     def __repr__(self):
         return self.__class__.__name__ + ' (' + str(self.in_features) + ' -> ' + str(self.out_features) + ')'
