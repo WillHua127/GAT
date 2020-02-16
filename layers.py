@@ -130,7 +130,7 @@ class GraphAttentionLayer(nn.Module):
         # h_prime: N x out
         
         #h_prime = h_prime.div(e_rowsum+theta)
-        h_prime = h_prime.div(e_rowsum)
+        h_prime = h_prime.div(e_rowsum+1e-16)
         # h_prime: N x out
         assert not torch.isnan(h_prime).any()
 
