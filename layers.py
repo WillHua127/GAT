@@ -97,15 +97,15 @@ class GraphAttentionLayer(nn.Module):
         
 
         h = torch.mm(input, self.W)
-        h = self.relu_bt(h)
+        #h = self.relu_bt(h)
         # h: N x out
         assert not torch.isnan(h).any()
 
         # Self-attention on the nodes - Shared attention mechanism
-        #input1 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
-        #input2 = torch.sub(h[edge[0, :], :], h[edge[1, :], :])
-        input1 = self.relu_bt(torch.add(h[edge[0, :], :], h[edge[1, :], :]))         
-        input2 = self.relu_bt(torch.sub(h[edge[0, :], :], h[edge[1, :], :]))
+        input1 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
+        input2 = torch.sub(h[edge[0, :], :], h[edge[1, :], :])
+        #input1 = self.relu_bt(torch.add(h[edge[0, :], :], h[edge[1, :], :]))         
+        #input2 = self.relu_bt(torch.sub(h[edge[0, :], :], h[edge[1, :], :]))
         #if not self.concat:
         #    input2 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
         #edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
@@ -136,12 +136,12 @@ class GraphAttentionLayer(nn.Module):
 
         if self.concat:
             # if this layer is not last layer,
-            #return self.relu_bt(h_prime)
-            return F.elu(h_prime)
+            return self.relu_bt(h_prime)
+            #return F.elu(h_prime)
         else:
             # if this layer is last layer,
-            #return self.relu_bt(h_prime)
-            return F.elu(h_prime)
+            return self.relu_bt(h_prime)
+            #return F.elu(h_prime)
 
     def __repr__(self):
         return self.__class__.__name__ + ' (' + str(self.in_features) + ' -> ' + str(self.out_features) + ')'
