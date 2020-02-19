@@ -54,67 +54,36 @@ class GraphAttentionLayer(nn.Module):
         nn.init.xavier_normal_(self.W.data, gain=1.414)
         self.a = nn.Parameter(torch.zeros(size=(1, 4*out_features)))
         nn.init.xavier_normal_(self.a.data, gain=1.414)
-        #self.WT = nn.Parameter(torch.zeros(size=(4*out_features, 2*out_features)))
-        #nn.init.xavier_normal_(self.WT.data, gain=1.414)
-        
-        #self.g = nn.Parameter(torch.zeros(size=(1, 1)))
-        #nn.init.xavier_uniform_(self.g.data, gain=1)
         
         self.b = nn.Parameter(torch.zeros(size=(1, 1)))
         nn.init.xavier_uniform_(self.b.data, gain=1)
-        
-        #self.bias = nn.Parameter(torch.zeros(size=(adj.shape[0], out_features)))
-        #nn.init.xavier_uniform_(self.bias.data, gain=1)
         
         self.dropout = nn.Dropout(dropout)
         self.leakyrelu = nn.LeakyReLU(self.alpha)
         self.special_spmm = SpecialSpmm()
 
     def relu_bt(self, x):
-        threshold = torch.norm(x,p=float("inf")).clone().detach()#(x.shape[0] * x.shape[1])#torch.Tensor([1e-6]).cuda()#torch.norm(x,p=float("inf")).clone().detach()#/(x.shape[0] * x.shape[1]) # p=1,2,float("inf"), torch.Tensor([1e-6]).cuda()
-        #print(" threshold: ", threshold)
-        return - torch.threshold(-F.leaky_relu(x),-threshold,-threshold) #F.relu(x-threshold) #- torch.threshold(-F.relu(x),-threshold,-threshold)
-        #return F.relu6(x)
-        #return F.relu(x-threshold)+threshold
-        #return torch.exp(F.relu(x-threshold)+threshold)-torch.Tensor([1])
-        #return torch.tanh(F.relu(x-threshold)) #
-        #return torch.nn.functional.gelu(x)
-        #return F.elu(x)
-        #return F.relu(x)
-    
+        threshold = torch.norm(x,p=float("inf")).clone().detach()
+        return - torch.threshold(-F.leaky_relu(x),-threshold,-threshold)
+
     def gam(self, x, epsilon=1e-6):
         return F.relu6(x+3)/3 + epsilon
-    
     
     def forward(self, input):
         dv = 'cuda' if input.is_cuda else 'cpu'
 
         N = input.size()[0]
         edge = self.edge
-        #gamma = self.gam(self.g)
-        #beta = self.gam(self.b)
-        theta = self.gam(self.b)/2
-        
-
         h = torch.mm(input, self.W)
-        #h = self.relu_bt(h)
+        h = self.relu_bt(h)
         # h: N x out
         assert not torch.isnan(h).any()
 
         # Self-attention on the nodes - Shared attention mechanism
-        input1 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
-        input2 = torch.sub(h[edge[0, :], :], h[edge[1, :], :])
-        #input1 = self.relu_bt(torch.add(h[edge[0, :], :], h[edge[1, :], :]))         
-        #input2 = self.relu_bt(torch.sub(h[edge[0, :], :], h[edge[1, :], :]))
-        #if not self.concat:
-        #    input2 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
-        #edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
-        #edge_h = torch.mm(self.WT, edge_h)
-        # edge: 2*D x E
-        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], input1, input2], dim=1).t()
-        #edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :]], dim=1).t()
+        agg = torch.add(h[edge[0, :], :], h[edge[1, :], :])
+        diff = torch.sub(h[edge[0, :], :], h[edge[1, :], :])
+        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], agg, diff], dim=1).t()
 
-        #edge_e = torch.exp(-self.leakyrelu(torch.div(self.a.mm(edge_h).squeeze(),torch.norm(self.a))))
         edge_e = torch.exp(-self.leakyrelu(self.a.mm(edge_h).squeeze()))
         assert not torch.isnan(edge_e).any()
         # edge_e: E
@@ -126,10 +95,9 @@ class GraphAttentionLayer(nn.Module):
         # edge_e: E
 
         h_prime = self.special_spmm(edge, edge_e, torch.Size([N, N]), h)
-        #assert not torch.isnan(h_prime).any()
+        assert not torch.isnan(h_prime).any()
         # h_prime: N x out
         
-        #h_prime = h_prime.div(e_rowsum+theta)
         h_prime = h_prime.div(e_rowsum+1e-16)
         # h_prime: N x out
         assert not torch.isnan(h_prime).any()
@@ -137,11 +105,9 @@ class GraphAttentionLayer(nn.Module):
         if self.concat:
             # if this layer is not last layer,
             return self.relu_bt(h_prime)
-            #return F.elu(h_prime)
         else:
             # if this layer is last layer,
             return self.relu_bt(h_prime)
-            #return F.elu(h_prime)
 
     def __repr__(self):
         return self.__class__.__name__ + ' (' + str(self.in_features) + ' -> ' + str(self.out_features) + ')'
