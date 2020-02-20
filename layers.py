@@ -52,39 +52,16 @@ class GraphAttentionLayer(nn.Module):
 
         self.W = nn.Parameter(torch.zeros(size=(in_features, out_features)))
         nn.init.xavier_normal_(self.W.data, gain=1.414)
-        self.a1 = nn.Parameter(torch.zeros(size=(1, 2*out_features)))
-        nn.init.xavier_normal_(self.a1.data, gain=1.414)
-        self.a2 = nn.Parameter(torch.zeros(size=(1, 1*out_features)))
-        nn.init.xavier_normal_(self.a2.data, gain=1.414)
-        self.a3 = nn.Parameter(torch.zeros(size=(1, 1*out_features)))
-        nn.init.xavier_normal_(self.a3.data, gain=1.414)
-        #self.WT = nn.Parameter(torch.zeros(size=(4*out_features, 4*out_features)))
-        #nn.init.xavier_normal_(self.WT.data, gain=1.414)
-        
-        #self.g = nn.Parameter(torch.zeros(size=(1, 1)))
-        #nn.init.xavier_uniform_(self.g.data, gain=1)
-        
-        self.b = nn.Parameter(torch.zeros(size=(1, 1)))
-        nn.init.xavier_uniform_(self.b.data, gain=1)
-        
-        #self.bias = nn.Parameter(torch.zeros(size=(adj.shape[0], out_features)))
-        #nn.init.xavier_uniform_(self.bias.data, gain=1)
+        self.a = nn.Parameter(torch.zeros(size=(1, 4*out_features)))
+        nn.init.xavier_normal_(self.a.data, gain=1.414)
         
         self.dropout = nn.Dropout(dropout)
         self.leakyrelu = nn.LeakyReLU(self.alpha)
         self.special_spmm = SpecialSpmm()
 
     def relu_bt(self, x):
-        threshold = torch.norm(x,p=float("inf")).clone().detach()#(x.shape[0] * x.shape[1])#torch.Tensor([1e-6]).cuda()#torch.norm(x,p=float("inf")).clone().detach()#/(x.shape[0] * x.shape[1]) # p=1,2,float("inf"), torch.Tensor([1e-6]).cuda()
-        #print(" threshold: ", threshold)
-        return - torch.threshold(-F.leaky_relu(x),-threshold,-threshold) #F.relu(x-threshold) #- torch.threshold(-F.relu(x),-threshold,-threshold)
-        #return F.relu6(x)
-        #return F.relu(x-threshold)+threshold
-        #return torch.exp(F.relu(x-threshold)+threshold)-torch.Tensor([1])
-        #return torch.tanh(F.relu(x-threshold)) #
-        #return torch.nn.functional.gelu(x)
-        #return F.elu(x)
-        #return F.relu(x)
+        threshold = torch.norm(x,p=float("inf")).clone().detach()
+        return - torch.threshold(-F.leaky_relu(x),-threshold,-threshold)
     
     def gam(self, x, epsilon=1e-6):
         return F.relu6(x+3)/3 + epsilon
@@ -95,9 +72,6 @@ class GraphAttentionLayer(nn.Module):
 
         N = input.size()[0]
         edge = self.edge
-        #gamma = self.gam(self.g)
-        #beta = self.gam(self.b)
-        theta = self.gam(self.b)/2
         
 
         h = torch.mm(input, self.W)
@@ -106,37 +80,25 @@ class GraphAttentionLayer(nn.Module):
         assert not torch.isnan(h).any()
 
         # Self-attention on the nodes - Shared attention mechanism
-        edge_h_2 = self.relu_bt(torch.add(h[edge[0, :], :], h[edge[1, :], :])).t()        
-        edge_h_3 = self.relu_bt(torch.sub(h[edge[0, :], :], h[edge[1, :], :])).t()
-        #if not self.concat:
-        #    input2 = torch.add(h[edge[0, :], :], h[edge[1, :], :])
-        edge_h_1 = torch.cat([h[edge[0, :], :], h[edge[1, :], :]], dim=1).t()
-        #edge_h = torch.mm(self.WT, edge_h)
-        # edge: 2*D x E
-        #edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :]], dim=1).t()
+        agg = self.relu_bt(torch.add(h[edge[0, :], :], h[edge[1, :], :]))       
+        diff = self.relu_bt(torch.sub(h[edge[0, :], :], h[edge[1, :], :]))
+        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], agg, diff], dim=1).t()
 
-        edge_e_1 = torch.exp(-self.leakyrelu(self.a1.mm(edge_h_1).squeeze()))
-        edge_e_2 = torch.exp(-self.leakyrelu(self.a2.mm(edge_h_2).squeeze()))
-        edge_e_3 = torch.exp(-self.leakyrelu(self.a3.mm(edge_h_3).squeeze()))
-        
-        #assert not torch.isnan(edge_e).any()
+        edge_e = torch.exp(-self.leakyrelu(self.a.mm(edge_h).squeeze()))
+        assert not torch.isnan(edge_e).any()
         # edge_e: E
         
-        e_rowsum_1 = self.special_spmm(edge, edge_e_1, torch.Size([N, N]), torch.ones(size=(N,1), device=dv))
-        e_rowsum_2 = self.special_spmm(edge, edge_e_2, torch.Size([N, N]), torch.ones(size=(N,1), device=dv))
-        e_rowsum_3 = self.special_spmm(edge, edge_e_3, torch.Size([N, N]), torch.ones(size=(N,1), device=dv))
+        e_rowsum = self.special_spmm(edge, edge_e, torch.Size([N, N]), torch.ones(size=(N,1), device=dv))
         # e_rowsum: N x 1
 
-        edge_e = edge_e_1+edge_e_2+edge_e_3
         edge_e = self.dropout(edge_e)
         # edge_e: E
 
         h_prime = self.special_spmm(edge, edge_e, torch.Size([N, N]), h)
-        #assert not torch.isnan(h_prime).any()
+        assert not torch.isnan(h_prime).any()
         # h_prime: N x out
         
-        e_rowsum = e_rowsum_1+e_rowsum_2+e_rowsum_3
-        h_prime = h_prime.div(e_rowsum+theta)
+        h_prime = h_prime.div(e_rowsum+1e-16)
         # h_prime: N x out
         assert not torch.isnan(h_prime).any()
 
