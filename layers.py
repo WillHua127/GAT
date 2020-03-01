@@ -82,7 +82,7 @@ class GraphAttentionLayer(nn.Module):
         # Self-attention on the nodes - Shared attention mechanism
         agg = self.relu_bt(torch.add(h[edge[0, :], :], h[edge[1, :], :]))       
         diff = self.relu_bt(torch.sub(h[edge[0, :], :], h[edge[1, :], :]))
-        edge_h = torch.cat([h[edge[0, :], :], h[edge[0, :], :]], dim=1).t()
+        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :]], dim=1).t()
 
         edge_e = torch.exp(-self.leakyrelu(self.a.mm(edge_h).squeeze()))
         assert not torch.isnan(edge_e).any()
