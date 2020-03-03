@@ -60,9 +60,8 @@ class GraphAttentionLayer(nn.Module):
         self.special_spmm = SpecialSpmm()
 
     def relu_bt(self, x):
-        #threshold = torch.norm(x,p=float("inf")).clone().detach()
-        #return - torch.threshold(-F.leaky_relu(x),-threshold,-threshold)
-        return F.elu(x)
+        threshold = torch.norm(x,p=float("inf")).clone().detach()
+        return - torch.threshold(-F.leaky_relu(x),-threshold,-threshold)
     
     def gam(self, x, epsilon=1e-6):
         return F.relu6(x+3)/3 + epsilon
@@ -81,9 +80,9 @@ class GraphAttentionLayer(nn.Module):
         assert not torch.isnan(h).any()
 
         # Self-attention on the nodes - Shared attention mechanism
-        #agg = self.relu_bt(torch.add(h[edge[0, :], :], h[edge[1, :], :]))       
-        #diff = self.relu_bt(torch.sub(h[edge[0, :], :], h[edge[1, :], :]))
-        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :]], dim=1).t()
+        agg = self.relu_bt(torch.add(h[edge[0, :], :], h[edge[1, :], :]))       
+        diff = self.relu_bt(torch.sub(h[edge[0, :], :], h[edge[1, :], :]))
+        edge_h = torch.cat([h[edge[0, :], :], h[edge[1, :], :], agg, diff], dim=1).t()
 
         edge_e = torch.exp(-self.leakyrelu(self.a.mm(edge_h).squeeze()))
         assert not torch.isnan(edge_e).any()
