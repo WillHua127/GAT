@@ -75,7 +75,7 @@ class GraphAttentionLayer(nn.Module):
         
 
         h = torch.mm(input, self.W)
-        #h = self.relu_bt(h)
+        h = self.relu_bt(h)
         # h: N x out
         assert not torch.isnan(h).any()
 
