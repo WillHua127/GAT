@@ -30,5 +30,5 @@ class GAT(nn.Module):
         x = torch.cat([att(x) for att in self.attentions], dim=1)
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.out_att(x)
-        return x
+        return F.log_softmax(x, dim=1)
 
