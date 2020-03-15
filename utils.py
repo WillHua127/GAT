@@ -25,6 +25,12 @@ def load_dataset(dataset, dense=False):
         y=120
     elif dataset == 'pubmed':
         y=60
+    elif dataset == 'nell.0.1':
+        y=6600
+    elif dataset == 'nell.0.01':
+        y=660
+    elif dataset == 'nell.0.001':
+        y=66
     idx_train = range(y)
     idx_val = range(y, len(s_val) + 500)
     idx_test = range(len(s_val) + 500, len(s_val) + 1500)
@@ -39,8 +45,6 @@ def load_dataset(dataset, dense=False):
         del dense_adj, indices, values
         return adj, features, labels, idx_train, idx_val, idx_test
     
-
-
 
 def load_data(prefix):
     print('Loading {} dataset...'.format(prefix))
@@ -60,14 +64,47 @@ def load_data(prefix):
     if prefix == 'citeseer':
         # Fix citeseer dataset (there are some isolated nodes in the graph)
         # Find isolated nodes, add them as zero-vecs into the right position
-        test_idx_range_full = range(min(test_idx_reorder),
-                                    max(test_idx_reorder) + 1)
+        test_idx_range_full = range(min(test_idx_reorder),max(test_idx_reorder) + 1)
         tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
         tx_extended[test_idx_range - min(test_idx_range), :] = tx
         tx = tx_extended
         ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))
         ty_extended[test_idx_range - min(test_idx_range), :] = ty
         ty = ty_extended
+        
+    if prefix == 'nell.0.1':
+        # Find relation nodes, add them as zero-vecs into the right position
+        test_idx_range_full = range(allx.shape[0], len(graph))
+        isolated_node_idx = np.setdiff1d(test_idx_range_full, test_idx_reorder)
+        tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
+        tx_extended[test_idx_range-allx.shape[0], :] = tx
+        tx = tx_extended
+        ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))
+        ty_extended[test_idx_range-allx.shape[0], :] = ty
+        ty = ty_extended
+    
+    if prefix == 'nell.0.01':
+        # Find relation nodes, add them as zero-vecs into the right position
+        test_idx_range_full = range(allx.shape[0], len(graph))
+        isolated_node_idx = np.setdiff1d(test_idx_range_full, test_idx_reorder)
+        tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
+        tx_extended[test_idx_range-allx.shape[0], :] = tx
+        tx = tx_extended
+        ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))
+        ty_extended[test_idx_range-allx.shape[0], :] = ty
+        ty = ty_extended
+    
+    if prefix == 'nell.0.001':
+        # Find relation nodes, add them as zero-vecs into the right position
+        test_idx_range_full = range(allx.shape[0], len(graph))
+        isolated_node_idx = np.setdiff1d(test_idx_range_full, test_idx_reorder)
+        tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
+        tx_extended[test_idx_range-allx.shape[0], :] = tx
+        tx = tx_extended
+        ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))
+        ty_extended[test_idx_range-allx.shape[0], :] = ty
+        ty = ty_extended
+        
     
     labels = np.vstack((ally, ty))
     labels[test_idx_reorder, :] = labels[test_idx_range, :]
